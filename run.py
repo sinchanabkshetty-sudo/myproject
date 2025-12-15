@@ -1,31 +1,20 @@
+# run.py — simplified controller to launch login and open panel on success
+from dotenv import load_dotenv
+load_dotenv() 
 import sys
 from PyQt6.QtWidgets import QApplication
 from aura_login import AuraLoginWindow
-from aura_panel import MainWindow
+# top of run.py (first lines)
+  # ensures .env values are available via os.getenv()
 
 class Controller:
     def __init__(self):
-        # Create login window
         self.login = AuraLoginWindow()
-
-        # Wrap original attempt_login() so we can detect success
-        original_attempt = self.login.attempt_login
-
-        def wrapped_attempt():
-            original_attempt()
-            # Check if success text appears (your login code sets this EXACT text)
-            if "Signed in successfully" in self.login.error_label.text():
-                QTimer.singleShot(300, self.open_panel)
-
-        from PyQt6.QtCore import QTimer
-        self.login.attempt_login = wrapped_attempt
-
         self.login.show()
 
-    def open_panel(self):
-        self.login.close()
-        self.panel = MainWindow()
-        self.panel.show()
+    def run(self):
+        # The login window itself opens the panel after success; controller just shows login.
+        pass
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
