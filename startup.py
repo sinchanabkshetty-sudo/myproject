@@ -65,14 +65,14 @@ def start_wake_word_listener():
     print("\n🎤 Starting Wake Word Listener...")
     print("=" * 50)
     
-    try:
-        subprocess.Popen([sys.executable, 'wake_word_listener.py'])
-        print("✅ Wake Word Listener started!")
-        print("\n📢 Say 'AURA' to activate the application")
+    #try:
+        #subprocess.Popen([sys.executable, 'wake_word_listener.py'])
+        #print("✅ Wake Word Listener started!")
+        #print("\n📢 Say 'AURA' to activate the application")
         
-    except Exception as e:
-        print(f"❌ Error starting listener: {e}")
-        sys.exit(1)
+    #except Exception as e:
+        #print(f"❌ Error starting listener: {e}")
+        #sys.exit(1)
 
 def add_to_startup(system_type=None):
     """

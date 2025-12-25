@@ -1,42 +1,26 @@
-# aura/__init__.py
-
 """
-AURA package initializer
-Creates and exposes the global EnhancedCommandEngine instance.
+Package entry point used by aura_panel and other modules.
+get_engine() returns a wrapper object that HAS .execute(...)
+with a backward‑compatible signature.
 """
 
-from .command_engine import EnhancedCommandEngine, SimpleKeywordHandler, CommandCategory
-from .enhanced_nlp import EnhancedNLP
-from .fuzzy_matcher import FuzzyMatcher
+from aura.engine import get_engine as _get_engine
 
-# Global engine instance (lazy-loaded)
-_engine = None
+
+class AURAEngineWrapper:
+    def __init__(self):
+        self._engine = _get_engine()
+
+    def execute(self, text: str, *args, **kwargs):
+        result = self._engine.execute_command(text)
+        return result.get("message", "Done.")
+
+    def execute_command(self, text: str):
+        return self._engine.execute_command(text)
+
+    def get_history(self, limit: int = 20):
+        return self._engine.get_history(limit)
 
 
 def get_engine():
-    """
-    Return the global engine.
-    If not initialized, create and initialize it using setup_handlers.initialize_engine().
-    """
-    global _engine
-
-    if _engine is None:
-        try:
-            from .setup_handlers import initialize_engine
-            _engine = initialize_engine()  # build engine + register all handlers
-            print("🔧 AURA Engine initialized successfully.")
-        except Exception as e:
-            print("❌ Engine failed to initialize:", e)
-            raise e
-
-    return _engine
-
-
-__all__ = [
-    "EnhancedCommandEngine",
-    "SimpleKeywordHandler",
-    "CommandCategory",
-    "EnhancedNLP",
-    "FuzzyMatcher",
-    "get_engine",
-]
+    return AURAEngineWrapper()

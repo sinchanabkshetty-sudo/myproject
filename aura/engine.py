@@ -1,52 +1,26 @@
-# aura/engine.py
 """
-AURA Engine: Main command execution handler
-Uses EnhancedCommandEngine with NLP + Fuzzy Matching
+Compatibility layer so any old code that uses:
+    from aura import engine
+    engine.execute("command", min_confidence=0.2)
+continues to work.
 """
 
-# Get the pre-initialized engine with all handlers
-from aura import get_engine
+from aura.command_engine import get_engine as _get_engine
+
+
+def get_engine():
+    return _get_engine()
+
+
+def execute(text: str, *args, **kwargs) -> str:
+    """
+    Legacy API. Extra args/kwargs (like min_confidence) are ignored.
+    """
+    engine = _get_engine()
+    result = engine.execute_command(text)
+    return result.get("message", "Done.")
 
 
 def handle_command(text: str) -> str:
-    """
-    Main entry point called by GUI.
-    Returns user-facing response string.
-    
-    This function:
-    1. Gets the global engine (with all handlers registered)
-    2. Auto-corrects typos using FuzzyMatcher
-    3. Detects intent using NLP
-    4. Routes to appropriate handler
-    5. Returns response
-    """
-    if not text:
-        return "Please say something."
-    
-    try:
-        engine = get_engine()
-        # Use lenient confidence threshold
-        response = engine.execute(text, min_confidence=0.2)
-        return response
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-
-def get_command_history(limit: int = 20):
-    """Get recent command history"""
-    try:
-        engine = get_engine()
-        return engine.get_history(limit)
-    except Exception as e:
-        print(f"Error getting history: {e}")
-        return []
-
-
-def get_handler_status() -> dict:
-    """Get info about all registered handlers"""
-    try:
-        engine = get_engine()
-        return engine.get_handler_info()
-    except Exception as e:
-        print(f"Error getting handler status: {e}")
-        return {}
+    """Preferred helper used by wake_word_listener."""
+    return execute(text)

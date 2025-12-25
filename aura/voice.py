@@ -20,7 +20,12 @@ def _get_engine():
     global _engine
     with _engine_lock:
         if _engine is None:
-            engine = pyttsx3.init()
+            try:
+                engine = pyttsx3.init()
+            except Exception as e:
+                print("TTS init error:", e)
+                _engine = None
+                return None
             # Default speaking speed / volume
             engine.setProperty("rate", 175)
             engine.setProperty("volume", 1.0)
@@ -43,14 +48,14 @@ def _pick_voice_for_lang(engine, lang: str):
     if lang.startswith("kn"):
         for v in voices:
             n = (v.name or "").lower()
-            l = "".join(v.languages).lower() if hasattr(v, "languages") else ""
+            l = "".join(getattr(v, "languages", [])).lower()
             if "kannada" in n or "kn_" in l or "kn-in" in l:
                 return v.id
 
     # For English: prefer female / Indian / English voices
     for v in voices:
         n = (v.name or "").lower()
-        l = "".join(v.languages).lower() if hasattr(v, "languages") else ""
+        l = "".join(getattr(v, "languages", [])).lower()
         if ("female" in n or "zira" in n or "india" in n or "english" in n
                 or "en_" in l):
             return v.id
@@ -99,6 +104,8 @@ def _do_speak(text: str, lang: str):
     try:
         engine.say(text)
         engine.runAndWait()
+    except Exception as e:
+        print("TTS speak error:", e)
     finally:
         _is_speaking = False
 
@@ -136,6 +143,9 @@ def set_voice(index: int):
     Optionally allow manual voice selection.
     """
     engine = _get_engine()
+    if not engine:
+        return "Voice engine not available."
+
     voices = engine.getProperty("voices")
     if 0 <= index < len(voices):
         engine.setProperty("voice", voices[index].id)

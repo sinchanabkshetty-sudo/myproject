@@ -51,8 +51,8 @@ from aura.voice import is_speaking as voice_is_speaking
 try:
     from history import save_history
 except Exception:
-    def save_history(id, t, r, m): pass
-
+    def save_history(id, t, r, m): 
+        pass
 
 # ------------- UI COLORS -------------
 BG_DARK   = QColor(18, 20, 28, 255)
@@ -62,16 +62,13 @@ NEON_BLUE = QColor(110, 116, 255)
 NEON_PINK = QColor(255, 120, 210)
 TEXT_WHITE = QColor(238, 242, 248)
 
-
 def set_aa(p: QPainter):
     p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
     p.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
     p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
-
-
 # ------------------------------------------------------------
-#                 LOGO WIDGET  (with speaking animation)
+# LOGO WIDGET  (with speaking animation)
 # ------------------------------------------------------------
 class AuraLogoWidget(QWidget):
     def __init__(self, parent=None):
@@ -137,8 +134,10 @@ class AuraLogoWidget(QWidget):
             r = R - ring_width / 2.0 + wave_amp * math.sin(wave_freq * a + self._t * 2.1)
             x = cx + r * math.cos(a)
             y = cy + r * math.sin(a)
-            if i == 0: path.moveTo(x, y)
-            else: path.lineTo(x, y)
+            if i == 0: 
+                path.moveTo(x, y)
+            else: 
+                path.lineTo(x, y)
         path.closeSubpath()
 
         grad = QLinearGradient(QPointF(0, 0), QPointF(w, h))
@@ -161,10 +160,8 @@ class AuraLogoWidget(QWidget):
 
         p.end()
 
-
-
 # ------------------------------------------------------------
-#                MIC BUTTON
+# MIC BUTTON
 # ------------------------------------------------------------
 class MicButton(QWidget):
     toggled = pyqtSignal(bool)
@@ -223,10 +220,8 @@ class MicButton(QWidget):
         p.drawPath(path)
         p.end()
 
-
-
 # ------------------------------------------------------------
-#               SEND BUTTON
+# SEND BUTTON
 # ------------------------------------------------------------
 class SendButton(QWidget):
     def __init__(self, on_click, parent=None):
@@ -237,12 +232,16 @@ class SendButton(QWidget):
         self.on_click = on_click
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-    def enterEvent(self, _): self.hover = True; self.update()
-    def leaveEvent(self, _): self.hover = False; self.press = False; self.update()
-    def mousePressEvent(self, _): self.press = True; self.update()
+    def enterEvent(self, _): 
+        self.hover = True; self.update()
+    def leaveEvent(self, _): 
+        self.hover = False; self.press = False; self.update()
+    def mousePressEvent(self, _): 
+        self.press = True; self.update()
     def mouseReleaseEvent(self, e):
         if self.press and self.rect().contains(e.position().toPoint()):
-            if self.on_click: self.on_click()
+            if self.on_click: 
+                self.on_click()
         self.press = False; self.update()
 
     def paintEvent(self, e: QPaintEvent):
@@ -275,10 +274,8 @@ class SendButton(QWidget):
         p.drawPath(path)
         p.end()
 
-
-
 # ------------------------------------------------------------
-#          VOICE INPUT THREAD
+# VOICE INPUT THREAD
 # ------------------------------------------------------------
 class VoiceThread(QThread):
     transcript = pyqtSignal(str)
@@ -353,10 +350,8 @@ class VoiceThread(QThread):
         except Exception:
             pass
 
-
-
 # ------------------------------------------------------------
-#                  PILL INPUT
+# PILL INPUT
 # ------------------------------------------------------------
 class PillInput(QWidget):
     send_requested = pyqtSignal(str)
@@ -415,10 +410,8 @@ class PillInput(QWidget):
         p.drawPath(path)
         p.end()
 
-
-
 # ------------------------------------------------------------
-#              AURA PANEL MAIN CLASS
+# AURA PANEL MAIN CLASS
 # ------------------------------------------------------------
 class AuraPanel(QWidget):
     def __init__(self, parent=None, corner_radius=32, model_path=None):
@@ -427,6 +420,7 @@ class AuraPanel(QWidget):
 
         # header UI
         self.logo = AuraLogoWidget(self)
+
         self.title = QLabel("AURA", self)
         self.title.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
         self.title.setStyleSheet("color:white;")
@@ -454,11 +448,22 @@ class AuraPanel(QWidget):
         )
         self.close_btn.clicked.connect(lambda: self.window().close())
 
+        self.logout_btn = QPushButton("⎋", self)
+        self.logout_btn.setFixedSize(30, 30)
+        self.logout_btn.setToolTip("Logout")
+        self.logout_btn.setStyleSheet(
+            "QPushButton{ color: rgba(255,140,140,210); background: transparent; "
+            "border: none; font: 700 16px 'Segoe UI'; }"
+            "QPushButton:hover { color: rgb(255,90,90); }"
+        )
+        self.logout_btn.clicked.connect(self._logout)
+
         header = QHBoxLayout()
         header.addWidget(self.logo)
         header.addLayout(hl)
         header.addStretch()
         header.addWidget(self.toggle_chat_btn)
+        header.addWidget(self.logout_btn)
         header.addWidget(self.close_btn)
 
         # input
@@ -497,6 +502,32 @@ class AuraPanel(QWidget):
 
         # START WAKE WORD LISTENER IN BACKGROUND
         Thread(target=self.start_wake_word_listener, daemon=True).start()
+
+    # ------------------------------------------------------------
+    # Logout handler
+    # ------------------------------------------------------------
+    def _logout(self):
+        """Stop voice thread, clear auto-login and show login window again."""
+        try:
+            if hasattr(self, "voice") and self.voice.isRunning():
+                self.voice.stop()
+                self.voice.wait(500)
+        except Exception:
+            pass
+
+        # Import here to avoid circular import at module level
+        from aura_login import AuraLoginWindow, user_memory
+
+        # clear saved user so auto-login does not trigger
+        user_memory.clear_user()
+
+        win = self.window()
+        if win is not None:
+            win.close()
+
+        # show login window
+        self.login_window = AuraLoginWindow()
+        self.login_window.show()
 
     # ------------------------------------------------------------
     # Wake-word listener starter
@@ -593,10 +624,8 @@ class AuraPanel(QWidget):
         p.drawPath(path)
         p.end()
 
-
-
 # ------------------------------------------------------------
-#          MAIN WINDOW
+# MAIN WINDOW
 # ------------------------------------------------------------
 class MainWindow(QWidget):
     def __init__(self, user_id=0, user_name="Guest"):
@@ -645,12 +674,11 @@ class MainWindow(QWidget):
 
     def closeEvent(self, e):
         try:
-            self.panel.voice.stop()
-            self.panel.voice.wait(500)
+            if hasattr(self.panel, "voice"):
+                self.panel.voice.stop()
+                self.panel.voice.wait(500)
         except Exception:
             pass
-
-
 
 # ------------------------------------------------------------
 # TEST MODE

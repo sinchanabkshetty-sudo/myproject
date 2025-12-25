@@ -2,16 +2,11 @@
 """
 aura_login.py
 Login + Registration UI for AURA (PyQt6) with Auto-Login Feature.
-Drop this file into your project root (replace existing aura_login.py).
-Requires:
- - aura_panel.py (defines MainWindow, AuraLogoWidget)
- - auth.py (defines login_user(email,password) and register_user(name,email,password))
 """
 
 import sys
 import re
 import json
-import os
 from pathlib import Path
 from typing import Tuple
 from datetime import datetime
@@ -27,12 +22,10 @@ from PyQt6.QtWidgets import (
 
 # ==================== USER MEMORY SYSTEM ====================
 class UserMemory:
-    """
-    Saves user login info for auto-login (first time only)
-    """
+    """Saves user login info for auto-login"""
     def __init__(self):
         self.memory_file = Path("user_memory.json")
-    
+   
     def save_user(self, email: str, password: str, user_id: int, user_name: str) -> bool:
         """Save user credentials"""
         try:
@@ -50,7 +43,7 @@ class UserMemory:
         except Exception as e:
             print(f"❌ Error saving user: {e}")
             return False
-    
+   
     def get_saved_user(self) -> dict:
         """Get saved user credentials"""
         try:
@@ -62,7 +55,7 @@ class UserMemory:
         except Exception as e:
             print(f"❌ Error reading user: {e}")
             return None
-    
+   
     def clear_user(self) -> bool:
         """Clear saved user (logout)"""
         try:
@@ -78,7 +71,6 @@ class UserMemory:
 user_memory = UserMemory()
 
 # ==================== AUTH IMPORTS ====================
-# Import auth functions (expected in your project)
 try:
     from auth import login_user, register_user
 except Exception:
@@ -347,12 +339,10 @@ class AuraLoginWindow(QWidget):
         super().__init__()
         self.corner_radius = 20
         self._drag_pos = None
+        self.panel = None
         self.setup_window()
         self.build_ui()
         self.attempt_login = self.handle_login
-        
-        # Check for auto-login
-        QTimer.singleShot(500, self.check_auto_login)
 
     def setup_window(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -442,15 +432,17 @@ class AuraLoginWindow(QWidget):
 
         # links row
         links = QHBoxLayout()
-        register_btn = QPushButton("Create account")
-        register_btn.setStyleSheet("background:transparent;color:rgba(200,210,230,200);border:0;text-decoration:underline;")
-        register_btn.clicked.connect(self.open_registration)
-        forgot_btn = QPushButton("Forgot?")
-        forgot_btn.setStyleSheet("background:transparent;color:rgba(200,210,230,200);border:0;text-decoration:underline;")
-        forgot_btn.clicked.connect(self.logout_user)
+        self.register_btn = QPushButton("Create account")
+        self.register_btn.setStyleSheet("background:transparent;color:rgba(200,210,230,200);border:0;text-decoration:underline;")
+        self.register_btn.clicked.connect(self.open_registration)
+       
+        self.forgot_btn = QPushButton("Forgot?")
+        self.forgot_btn.setStyleSheet("background:transparent;color:rgba(200,210,230,200);border:0;text-decoration:underline;")
+        self.forgot_btn.clicked.connect(self.show_forgot_message)
+       
         links.addStretch(1)
-        links.addWidget(register_btn)
-        links.addWidget(forgot_btn)
+        links.addWidget(self.register_btn)
+        links.addWidget(self.forgot_btn)
         links.addStretch(1)
         root.addLayout(links)
 
@@ -485,7 +477,6 @@ class AuraLoginWindow(QWidget):
                     stop:1 rgba(90,240,255,255)
                 );
             }
-            QPushButton:hover { transform: translateY(-1px); }
         """)
 
     def toggle_eye(self):
@@ -496,27 +487,18 @@ class AuraLoginWindow(QWidget):
             self.password_field.setEchoMode(QLineEdit.EchoMode.Password)
             self.eye_btn.setIcon(svg_to_icon(EYE_OUTLINE_SVG))
 
-    def check_auto_login(self):
-        """Check if user is already logged in"""
-        saved_user = user_memory.get_saved_user()
-        
-        if saved_user:
-            print(f"\n✅ Welcome back! Auto-logging in as {saved_user['user_name']}...")
-            self.error_label.setStyleSheet("color:#80ff9a;font-size:13px;")
-            self.error_label.setText(f"Welcome back, {saved_user['user_name']}! Opening AURA…")
-            self.error_label.setVisible(True)
-            
-            QTimer.singleShot(800, lambda: self.open_panel(
-                saved_user['user_id'],
-                saved_user['user_name']
-            ))
-
     def open_registration(self):
         dlg = RegistrationDialog(self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self.error_label.setStyleSheet("color:#80ff9a;font-size:13px;")
             self.error_label.setText("Registered — please sign in.")
             self.error_label.setVisible(True)
+
+    def show_forgot_message(self):
+        """Show a message for forgot password"""
+        self.error_label.setStyleSheet("color:rgba(200,210,230,200);font-size:13px;")
+        self.error_label.setText("Please contact support to reset your password.")
+        self.error_label.setVisible(True)
 
     def validate_inputs(self) -> Tuple[bool, str]:
         email = self.email_field.text().strip()
@@ -547,23 +529,20 @@ class AuraLoginWindow(QWidget):
 
         # Success — save user and open panel
         user_memory.save_user(email, password, user_id, user_name)
-        
+       
         self.error_label.setStyleSheet("color:#80ff9a;font-size:13px;")
         self.error_label.setText("Login successful! Opening AURA…")
         self.error_label.setVisible(True)
         QTimer.singleShot(300, lambda: self.open_panel(user_id, user_name))
 
     def open_panel(self, user_id, user_name):
+        """Open main panel and close login window"""
+        if self.panel is not None:
+            return  # Prevent duplicate
+        
         self.panel = MainWindow(user_id, user_name)
         self.panel.show()
-        self.close()
-
-    def logout_user(self):
-        """Clear saved user data"""
-        user_memory.clear_user()
-        self.error_label.setStyleSheet("color:#ff7070;font-size:13px;")
-        self.error_label.setText("User cleared. Please sign in again.")
-        self.error_label.setVisible(True)
+        self.close()  # Close login window
 
     def show_error(self, msg):
         self.error_label.setStyleSheet("color:#ff7070;font-size:13px;")
@@ -591,6 +570,19 @@ class AuraLoginWindow(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setApplicationName("AURA Login")
-    win = AuraLoginWindow()
-    win.show()
+    
+    # ✅ CHECK AUTO-LOGIN FIRST - BEFORE CREATING ANY WINDOW
+    saved_user = user_memory.get_saved_user()
+    
+    if saved_user:
+        # Auto-login: Open panel directly, NO login window
+        print(f"✅ Auto-login: Welcome back, {saved_user['user_name']}!")
+        panel = MainWindow(saved_user['user_id'], saved_user['user_name'])
+        panel.show()
+    else:
+        # No saved user: Show login window
+        print("❌ No saved user. Please login.")
+        win = AuraLoginWindow()
+        win.show()
+    
     sys.exit(app.exec())
